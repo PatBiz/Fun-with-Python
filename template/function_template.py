@@ -44,7 +44,6 @@ class FunctionTemplate :
         param_name = list(self.template_params.keys())[pos]
         param_type = self.template_params[param_name]
 
-
         if not isinstance(template_arg, param_type) :
             raise TypeError(f"'{param_name}' must be of type '{param_type}'.")
         return param_name, template_arg
@@ -90,8 +89,7 @@ class FunctionTemplate :
         build_args[comp[0]] = comp[1]
         return self._build(frozendict(build_args))
 
-    @lru_cache(50)
-    def _build(self, build_args: frozendict) -> Callable|FunctionTemplate :
+    def _notCached_build(self, build_args: frozendict) -> Callable|FunctionTemplate :
         template_scope = build_args.unfreeze()
 
         isBeingPartiallyBuil = len(self.template_params) > len(template_scope)
@@ -110,6 +108,18 @@ class FunctionTemplate :
         template_scope |= self.globals
         exec(dedent(self.declaration), template_scope)
         return template_scope[self.name]
+
+    @lru_cache(50)
+    def _cached_build(self, build_args: frozendict) -> Callable|FunctionTemplate :
+        return self._notCached_build(build_args)
+
+    def _build(self, build_args: frozendict) -> Callable|FunctionTemplate :
+        try :
+            hash(build_args)
+        except TypeError :
+            return self._notCached_build(build_args)
+        else :
+            return self._cached_build(build_args)
 
     def __call__(self, *args: Any, **kwds: Any) -> Any:
         raise RuntimeError(

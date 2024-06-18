@@ -33,7 +33,7 @@ class Tests_FunctionTemplate(unittest.TestCase) :
         self.assertTrue(hasRaisedSyntaxError("templatedFunc['T':str, 1]"))
 
 
-    def test_TypeError_wrongType_of_template_argument(self) :
+    def test_TypeError_wrongType_templateArgument(self) :
         """
         Template's arguments must corresponds to the type of the template's parameters.
         Otherwise the following error is raised :
@@ -58,25 +58,25 @@ class Tests_FunctionTemplate(unittest.TestCase) :
         ... You must fully initialise it, before calling it.
         """
 
-        def hasRaisedRuntinmeError(expr: str) -> bool :
+        def hasRaisedRuntimeError(expr: str) -> bool :
             try : eval(expr)
             except RuntimeError : return True
             else : return False
 
 
-        self.assertTrue(hasRaisedRuntinmeError("templatedFunc()"))
+        self.assertTrue(hasRaisedRuntimeError("templatedFunc()"))
         #Even with partially initialised function template :
-        self.assertTrue(hasRaisedRuntinmeError("templatedFunc['T':int]()"))
+        self.assertTrue(hasRaisedRuntimeError("templatedFunc['T':int]()"))
 
 
     def test_calling_Initialized_functionTemplate(self) :
         """
         The object returned by fully initilaising a function template is a function.
-        Therefore, calling it with proper argument doesn't raise unexpected errors.
+        Therefore, properly built functions don't raise unexpected errors.
         """
 
         def hasSuccessfullyRan(expr: str) -> bool :
-            #Based on the fact that templatedFunc doesn't naturally raise an error :
+            #Based on the fact that 'templatedFunc' doesn't naturally raise an error :
             try : eval(expr)
             except Exception : return False
             else : return True
@@ -84,3 +84,31 @@ class Tests_FunctionTemplate(unittest.TestCase) :
         self.assertTrue(hasSuccessfullyRan("templatedFunc['N':1, 'T':int]()"))
         self.assertTrue(hasSuccessfullyRan("templatedFunc[1, 'T':int]()"))
         self.assertTrue(hasSuccessfullyRan("templatedFunc[1, int]()"))
+
+
+class Tests_FunctionTemplate_NonHashableTemplateArgument(unittest.TestCase) :
+
+    @classmethod
+    def setUpClass(cls) -> None:
+
+        @template['switcher': dict]
+        def convertTo(name: str) :
+            return switcher[name]
+
+        globals()["convertTo"] = convertTo
+
+    def test_calling_Initialized_functionTemplate(self) :
+        """
+        Template's arguments aren't needed to be hashable.
+        However, when they are hashable, the function built is memoized.
+        Therefore, functions built with non hashable arguments don't raise unexpected errors.
+        """
+
+        def hasSuccessfullyRan(expr: str) -> bool :
+            #Based on the fact that 'convertTo' doesn't naturally raise an error :
+            try : eval(expr)
+            except Exception : return False
+            else : return True
+
+        self.assertTrue(hasSuccessfullyRan("convertTo['switcher': {'a': 1}]('a')"))
+        self.assertTrue(hasSuccessfullyRan("convertTo[{'a': 1}]('a')"))
