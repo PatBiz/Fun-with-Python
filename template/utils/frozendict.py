@@ -11,7 +11,7 @@ class frozendict(dict) :
 
     def __setitem__(self, key, value) :
         raise TypeError("Frozendict are immutable")
-    
+
     def __delitem__(self, key) :
         raise TypeError("Frozendict are immutable")
 

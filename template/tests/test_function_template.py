@@ -12,7 +12,7 @@ class Tests_FunctionTemplate(unittest.TestCase) :
 
         @template['N': int, 'T': type]
         def templatedFunc () :
-            print(isinstance(N, T))
+            return isinstance(N, T)
 
         globals()["templatedFunc"] = templatedFunc
 
@@ -44,7 +44,7 @@ class Tests_FunctionTemplate(unittest.TestCase) :
             try : eval(expr)
             except TypeError : return True
             else : return False
-        
+
         self.assertTrue(hasRaisedTypeError("templatedFunc['N':int, 'T':1]"))
         self.assertTrue(hasRaisedTypeError("templatedFunc[int, 'T':1]"))
         self.assertTrue(hasRaisedTypeError("templatedFunc[int, 1]"))
@@ -67,12 +67,12 @@ class Tests_FunctionTemplate(unittest.TestCase) :
         self.assertTrue(hasRaisedRuntinmeError("templatedFunc()"))
         #Even with partially initialised function template :
         self.assertTrue(hasRaisedRuntinmeError("templatedFunc['T':int]()"))
-            
+
 
     def test_calling_Initialized_functionTemplate(self) :
         """
         The object returned by fully initilaising a function template is a function.
-        Therefore, calling it with proper argument doesn't raise any error unexpected errors.
+        Therefore, calling it with proper argument doesn't raise unexpected errors.
         """
 
         def hasSuccessfullyRan(expr: str) -> bool :
