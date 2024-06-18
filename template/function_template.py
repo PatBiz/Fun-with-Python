@@ -34,7 +34,7 @@ class FunctionTemplate :
         self.template_params = template_params
         self.globals = globals
 
-    @overload    
+    @overload
     def __getitem__(self, key: TemplateArg | TemplateKwarg) -> Callable : ...
 
     @overload
@@ -92,16 +92,25 @@ class FunctionTemplate :
 
     @lru_cache(50)
     def _build(self, build_args: frozendict) -> Callable|FunctionTemplate :
-        #Building template-scope :
         template_scope = build_args.unfreeze()
+
+        isBeingPartiallyBuil = len(self.template_params) > len(template_scope)
+        if isBeingPartiallyBuil :
+            return FunctionTemplate(
+                self.name,
+                self.declaration,
+                {
+                    k:v
+                    for k,v in self.template_params.items()
+                    if k not in template_scope
+                },
+                self.globals | template_scope
+            )
+
         template_scope |= self.globals
-
         exec(dedent(self.declaration), template_scope)
-
-        # DEBUG :: pprint(self.declaration)
-
         return template_scope[self.name]
-    
+
     def __call__(self, *args: Any, **kwds: Any) -> Any:
         raise RuntimeError(
             "Object of type 'FunctionTemplate' aren't callable.\n"
