@@ -5,14 +5,18 @@
 from __future__ import annotations
 
 "Standard Library :"
+import ast
 import inspect
+import sys
+
+from itertools import islice
+from textwrap import dedent
 #To annotate
 from typing import overload
-from collections.abc import Sequence, Callable
-
+from collections.abc import Sequence
 
 "Local Library :"
-from function_template import FunctionTemplate
+from callable_template import CallableTemplate
 #To annotate
 from utils.types import TemplateParameter, isTemplateParameter
 
@@ -25,8 +29,16 @@ __all__ = ("template")
 # ********************************* Classes ************************************
 
 class template :
-    def __init__(self, template_params: dict[str, type]) -> None:
-        self.template_params = template_params
+    def __init__(self, template_params: dict[str, type]) -> None :
+        self._template_params = template_params
+
+        try :
+            self._frame = sys._getframe(2)
+        except AttributeError as err :
+            # Might occurs if the Python implementation used doesn't support
+            # frames objects.
+            raise RuntimeError("'sys' module couldn't be used to get frame.")
+
 
     @overload
     @classmethod
@@ -39,6 +51,8 @@ class template :
     @classmethod
     def __class_getitem__(cls, key) :
         if isTemplateParameter(key) :
+            if isinstance(key, str) :
+                return template({key: object})
             return template({key.start: key.stop})
 
         if isinstance(key, Sequence) :
@@ -46,25 +60,97 @@ class template :
             for k in key :
                 if not isTemplateParameter(k) :
                   raise ValueError("Template is badly parameterized")
-                template_params[k.start] = k.stop
+                if isinstance(k, str) :
+                    template_params[k] = object
+                else :
+                    template_params[k.start] = k.stop
             return template(template_params)
 
         raise ValueError("Template is badly parameterized")
 
-    def __call__(self, func: Callable) -> FunctionTemplate :
-        #Getting 'func' declaration :
-        whole_declaration_lines, declaration_1st_line = inspect.getsourcelines(func)
-        caller_line = inspect.currentframe().f_back.f_lineno
 
-        caller_relative_line = caller_line - declaration_1st_line
+    def _get_WithBlock(self) -> str :
+        with_block_start, with_block_end, *_ = next(islice(
+            self._frame.f_code.co_positions(),
+            self._frame.f_lasti // 2,
+            None,
+        ))
+        return dedent("".join(
+            inspect.findsource(self._frame)[0][
+                with_block_start : with_block_end
+            ]
+        ))
 
-        #top_decl = "".join(whole_declaration_lines[:caller_relative_line])
-        sub_decl = "".join(whole_declaration_lines[caller_relative_line + 1:])
+    def _silence_WithBlock(self) :
+        sys.settrace(lambda frame, event, arg : None)
+        self._frame.f_trace = lambda frame, event, arg : exec("raise Exception")
 
-        return FunctionTemplate(
-            func.__name__,
-            sub_decl,
-            #top_decl,
-            self.template_params,
-            func.__globals__, #inspect.currentframe().f_back.f_locals,
+    def __enter__(self) :
+
+        with_block = self._get_WithBlock()
+
+        stmts = ast.parse(with_block).body
+
+        if len(stmts) != 1 :
+            # Otherwise, it suggests that the template's arguments are linked.
+            raise SyntaxError("Multiple statements given.")
+
+        def_stmt = stmts[0]
+
+        CallableDef = ast.FunctionDef | ast.AsyncFunctionDef | ast.ClassDef
+        if not isinstance(def_stmt, CallableDef) :
+            # Even if variable template does exist in C++, it's rarely used
+            # and would be confusing in Python.
+            # Thus, the choice to forbid it.
+            raise SyntaxError("Can only template class/function definition.")
+
+        isDunder = def_stmt.name.startswith("__") and def_stmt.name.endswith("__")
+        if isDunder :
+            # As dunder-methods are often called implicitly, it's impossible
+            # to specialize the template making them unusable.
+            # Moreover, templating the class itself might do what was desired.
+            # Thus, the choice to forbid templating dunder-methods.
+            raise SyntaxError(
+                "Cannot template dunder-methods, you should template the class itself."
+            )
+
+        def isProperty(stmt) :
+            s = set()
+            for dec in stmt.decorator_list :
+                try :
+                    s.add(dec.id)
+                except AttributeError :
+                    s.add(dec.attr)
+            return "property" in s or "cached_property" in s
+
+        if isProperty(def_stmt) :
+            # They aren't methods and templating the class itself will often
+            # do what was desired.
+            # Thus, the choice to forbid templating properties.
+            raise SyntaxError(
+                "Cannot template properties, you should template the class itself."
+            )
+
+        cb_template = CallableTemplate(
+            def_stmt.name,
+            with_block,
+            self._template_params,
+            self._frame.f_globals,
         )
+
+        self._frame.f_locals[def_stmt.name] = cb_template
+
+        if def_stmt.name not in self._frame.f_locals :
+            # Might not happen on all Python implementations.
+            # But, in CPython, function namespaces were changed for performance
+            # reason, making 'frame.f_locals' a dictionary created on the fly.
+            # Therefore any updates to 'frame.f_locals' may not happen.
+            # (See : https://peps.python.org/pep-0667/#rationale)
+            #
+            # Btw, PEP 667 might solve this problem in Python 3.13.
+            raise NotImplementedError("To be implemented.")
+
+        self._silence_WithBlock()
+
+    def __exit__(self, exc_type, exc_value, traceback) :
+        return True
