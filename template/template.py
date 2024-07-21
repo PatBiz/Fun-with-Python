@@ -105,34 +105,7 @@ class template :
             # Even if variable template does exist in C++, it's rarely used
             # and would be confusing in Python.
             # Thus, the choice to forbid it.
-            raise TypeError("Can only template class/function definition.")
-
-        isDunder = def_stmt.name.startswith("__") and def_stmt.name.endswith("__")
-        if isDunder :
-            # As dunder-methods are often called implicitly, it's impossible
-            # to intantiate the template making them unusable.
-            # Moreover, templating the class itself might do what was desired.
-            # Thus, the choice to forbid templating dunder-methods.
-            raise SyntaxError(
-                "Cannot template dunder-methods, you should template the class itself."
-            )
-
-        def isProperty(stmt) :
-            s = set()
-            for dec in stmt.decorator_list :
-                try :
-                    s.add(dec.id)
-                except AttributeError :
-                    s.add(dec.attr)
-            return "property" in s or "cached_property" in s
-
-        if isProperty(def_stmt) :
-            # They aren't methods and templating the class itself will often
-            # do what was desired.
-            # Thus, the choice to forbid templating properties.
-            raise SyntaxError(
-                "Cannot template properties, you should template the class itself."
-            )
+            raise SyntaxError("Can only template class/function definition.")
 
         cb_template = CallableTemplate(
             def_stmt.name,
@@ -157,3 +130,16 @@ class template :
 
     def __exit__(self, exc_type, exc_value, traceback) :
         return True
+
+class C :
+    def __init__(self, v) -> None:
+        self.v: int = v
+
+    with template['N': int] :
+        @property
+        def prop(self) :
+            return self.v * N
+
+inst = C(4)
+
+print(inst.prop[5])
