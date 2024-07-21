@@ -54,7 +54,7 @@ class CallableTemplate :
         try :
             param_type = self._template_params[param_name]
         except KeyError :
-            raise RuntimeError(f"'{param_name}' isn't a template parameter.")
+            raise NameError(f"'{param_name}' isn't a template parameter.")
 
         if not isinstance(arg, param_type) :
             raise TypeError(f"'{param_name}' must be of type '{param_type}'.")
@@ -127,5 +127,5 @@ class CallableTemplate :
     def __call__(self, *args: Any, **kwds: Any) -> Any:
         raise RuntimeError(
             "Object of type 'CallableTemplate' aren't callable.\n"
-            "You must fully specialize/initialise it."
+            "You must fully build/instantiate it."
         )

@@ -50,6 +50,9 @@ class template :
 
     @classmethod
     def __class_getitem__(cls, key) :
+
+        # TODO : Making error messages more useful when badly parameterising 'template'
+
         if isTemplateParameter(key) :
             if isinstance(key, str) :
                 return template({key: object})
@@ -59,14 +62,14 @@ class template :
             template_params = {}
             for k in key :
                 if not isTemplateParameter(k) :
-                  raise ValueError("Template is badly parameterized")
+                  raise TypeError("Template is badly parameterized")
                 if isinstance(k, str) :
                     template_params[k] = object
                 else :
                     template_params[k.start] = k.stop
             return template(template_params)
 
-        raise ValueError("Template is badly parameterized")
+        raise TypeError("Template is badly parameterized")
 
 
     def _get_WithBlock(self) -> str :
@@ -102,12 +105,12 @@ class template :
             # Even if variable template does exist in C++, it's rarely used
             # and would be confusing in Python.
             # Thus, the choice to forbid it.
-            raise SyntaxError("Can only template class/function definition.")
+            raise TypeError("Can only template class/function definition.")
 
         isDunder = def_stmt.name.startswith("__") and def_stmt.name.endswith("__")
         if isDunder :
             # As dunder-methods are often called implicitly, it's impossible
-            # to specialize the template making them unusable.
+            # to intantiate the template making them unusable.
             # Moreover, templating the class itself might do what was desired.
             # Thus, the choice to forbid templating dunder-methods.
             raise SyntaxError(
