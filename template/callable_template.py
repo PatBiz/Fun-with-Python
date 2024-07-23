@@ -122,10 +122,3 @@ class CallableTemplate :
     @lru_cache(50)
     def _cached_build(self, build_args: frozendict) -> Callable|CallableTemplate :
         return self._notCached_build(build_args)
-
-
-    def __call__(self, *args: Any, **kwds: Any) -> Any:
-        raise RuntimeError(
-            "Object of type 'CallableTemplate' aren't callable.\n"
-            "You must fully build/instantiate it."
-        )
