@@ -14,6 +14,9 @@ from callable_template import CallableTemplate
 def isCallableTemplate(obj: object) -> bool :
     return isinstance(obj, CallableTemplate)
 
+def isCallable(obj: object) -> bool :
+    # Alias as 'callable' looks like a type
+    return callable(obj)
 
 def succesfullyRan(cb) :
     # Based on the assumption that 'cb' doesn't naturally raise an error.
@@ -51,10 +54,10 @@ class Test_CallableTemplate_Building(unittest.TestCase) :
         """
         
         self.assertTrue(
-            not isCallableTemplate(self.GLOB_SCOPE["cb"][5, int])
-            and not isCallableTemplate(self.GLOB_SCOPE["cb"][5, 'T':int])
-            and not isCallableTemplate(self.GLOB_SCOPE["cb"]['N': 5, 'T':int])
-            and not isCallableTemplate(self.GLOB_SCOPE["cb"]['T':int, 'N': 5])
+            isCallable(self.GLOB_SCOPE["cb"][5, int])
+            and isCallable(self.GLOB_SCOPE["cb"][5, 'T':int])
+            and isCallable(self.GLOB_SCOPE["cb"]['N': 5, 'T':int])
+            and isCallable(self.GLOB_SCOPE["cb"]['T':int, 'N': 5])
         )
 
     def test_callable_template_partial_build(self) :
@@ -88,7 +91,7 @@ class Test_CallableTemplate_Building(unittest.TestCase) :
         GLOB_SCOPE = vars(GlobScope)
 
         self.assertTrue(
-          not isCallableTemplate(GLOB_SCOPE['convertTo'][{}])
+          isCallable(GLOB_SCOPE['convertTo'][{}])
         )
 
     # ---- Errors :
