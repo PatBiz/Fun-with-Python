@@ -147,17 +147,16 @@ class Test_CallableTemplate_Calling(unittest.TestCase) :
 
     # ---- Errors :
 
-    def test_RuntimeError__calling_notfully_built_callable_template(self) :
+    def test_TypeError__calling_notfully_built_callable_template(self) :
         """
         Callable template must be fully initialised before being called.
         Otherwise the following error is raised :
-        >>> RuntimeError: Object of type 'FunctionTemplate' aren't callable.
-        ... You must fully initialise it, before calling it.
+        >>> TypeError: 'CallableTemplate' object is not callable
         """
 
-        with self.assertRaises(RuntimeError) :
+        with self.assertRaises(TypeError) :
             self.GLOB_SCOPE["cb"]()
         
         #Even with partially initialised function template :
-        with self.assertRaises(RuntimeError) :
+        with self.assertRaises(TypeError) :
             self.GLOB_SCOPE["cb"]['T':int]()
