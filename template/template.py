@@ -130,16 +130,3 @@ class template :
 
     def __exit__(self, exc_type, exc_value, traceback) :
         return True
-
-class C :
-    def __init__(self, v) -> None:
-        self.v: int = v
-
-    with template['N': int] :
-        @property
-        def prop(self) :
-            return self.v * N
-
-inst = C(4)
-
-print(inst.prop[5])
