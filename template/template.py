@@ -72,25 +72,18 @@ class template :
         raise TypeError("Template is badly parameterized")
 
 
-    def _get_WithBlock(self) -> str :
+    def __enter__(self) :
         with_block_start, with_block_end, *_ = next(islice(
             self._frame.f_code.co_positions(),
             self._frame.f_lasti // 2,
             None,
         ))
-        return dedent("".join(
+
+        with_block = dedent("".join(
             inspect.findsource(self._frame)[0][
                 with_block_start : with_block_end
             ]
         ))
-
-    def _silence_WithBlock(self) :
-        sys.settrace(lambda frame, event, arg : None)
-        self._frame.f_trace = lambda frame, event, arg : exec("raise Exception")
-
-    def __enter__(self) :
-
-        with_block = self._get_WithBlock()
 
         stmts = ast.parse(with_block).body
 
@@ -126,7 +119,8 @@ class template :
             # Btw, PEP 667 might solve this problem in Python 3.13.
             raise NotImplementedError("To be implemented.")
 
-        self._silence_WithBlock()
+        sys.settrace(lambda frame, event, arg : None)
+        self._frame.f_trace = lambda frame, event, arg : exec("raise Exception")
 
     def __exit__(self, exc_type, exc_value, traceback) :
         return True
